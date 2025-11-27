@@ -1,4 +1,6 @@
 import streamlit as st
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 # ----------------- CONFIGURAÇÃO BÁSICA -----------------
 st.set_page_config(
@@ -40,6 +42,112 @@ def format_currency_br(valor: float) -> str:
 def format_number_br(valor: float, decimals: int = 0) -> str:
     fmt = f"{{:,.{decimals}f}}"
     return fmt.format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def gerar_imagem_resumo(dados: dict) -> bytes:
+    """
+    Gera uma imagem PNG com o resumo da simulação
+    (pensado para compartilhar no WhatsApp).
+    """
+    largura, altura = 1080, 1350
+    bg_color = (15, 23, 42)     # fundo escuro
+    text_color = (255, 255, 255)
+    accent_color = (56, 189, 248)
+
+    img = Image.new("RGB", (largura, altura), bg_color)
+    draw = ImageDraw.Draw(img)
+
+    # Tenta usar uma fonte TTF do sistema; se não achar, usa a padrão
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
+        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
+        font_body = ImageFont.truetype("DejaVuSans.ttf", 34)
+    except Exception:
+        font_title = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
+        font_body = ImageFont.load_default()
+
+    # Título
+    titulo = "Calculadora de Economia – Energia Verde"
+    draw.text((60, 60), titulo, font=font_title, fill=accent_color)
+
+    # Cliente / conta
+    y = 160
+    draw.text((60, y), f"Conta atual: {dados['valor_conta']}", font=font_sub, fill=text_color)
+    y += 60
+    draw.text((60, y), f"Nova conta aproximada: {dados['nova_conta']}", font=font_sub, fill=text_color)
+    y += 80
+
+    # Economia
+    draw.text((60, y), f"Economia mensal estimada: {dados['economia_mensal']}", font=font_body, fill=text_color)
+    y += 50
+    draw.text(
+        (60, y),
+        f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 80
+
+    # Parâmetros
+    draw.text((60, y), "Parâmetros financeiros:", font=font_sub, fill=accent_color)
+    y += 50
+    draw.text(
+        (60, y),
+        f"- Desconto aplicado: {dados['desconto']}%",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 40
+    draw.text(
+        (60, y),
+        f"- Cobertura energia verde: {dados['cobertura']}% da conta",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 40
+    draw.text(
+        (60, y),
+        f"- Parte variável considerada: {dados['parte_variavel']}% da conta",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 70
+
+    # Impacto ambiental
+    draw.text((60, y), "Impacto ambiental estimado:", font=font_sub, fill=accent_color)
+    y += 50
+    draw.text(
+        (60, y),
+        f"- Fator de emissão: {dados['fator_co2']} kg CO₂e/kWh",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 40
+    draw.text(
+        (60, y),
+        f"- CO₂ evitado em {dados['periodo_meses']} meses:",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 40
+    draw.text(
+        (80, y),
+        f"{dados['co2_periodo_t']} t CO₂e",
+        font=font_body,
+        fill=accent_color,
+    )
+
+    # Rodapé
+    rodape = "Simulação estimada. Para inventários oficiais (GHG Protocol), use fatores de emissão da região do cliente."
+    y_rodape = altura - 160
+    draw.text((60, y_rodape), rodape, font=font_body, fill=(148, 163, 184))
+
+    # Exporta para bytes
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 # ----------------- SIDEBAR – ENTRADAS -----------------
@@ -198,3 +306,35 @@ st.info(
     "Para relatórios oficiais (ex.: inventário GHG Protocol), utilize fatores "
     "aprovados e ajustados à fonte de energia e à região do cliente."
 )
+
+# ----------------- COMPARTILHAR COM O CLIENTE (IMAGEM) -----------------
+st.markdown("---")
+st.markdown("### 📲 Compartilhar com o cliente")
+
+st.write(
+    "Clique no botão abaixo para gerar uma **imagem em PNG** com o resumo da simulação. "
+    "Depois é só baixar e enviar pelo WhatsApp para o cliente."
+)
+
+dados_para_imagem = {
+    "valor_conta": format_currency_br(valor_conta),
+    "nova_conta": format_currency_br(nova_conta),
+    "economia_mensal": format_currency_br(economia_mensal),
+    "economia_periodo": format_currency_br(economia_total_periodo),
+    "periodo_meses": periodo_meses,
+    "desconto": desconto_percent,
+    "cobertura": cobertura_percent,
+    "parte_variavel": parte_variavel_percent,
+    "fator_co2": format_number_br(fator_emissao_kg_kwh, 2),
+    "co2_periodo_t": format_number_br(co2_evitado_t_periodo, 2),
+}
+
+if st.button("Gerar imagem para WhatsApp"):
+    img_bytes = gerar_imagem_resumo(dados_para_imagem)
+    st.image(img_bytes, caption="Resumo da simulação")
+    st.download_button(
+        label="⬇️ Baixar imagem (PNG)",
+        data=img_bytes,
+        file_name="resumo_energia_verde.png",
+        mime="image/png",
+    )
