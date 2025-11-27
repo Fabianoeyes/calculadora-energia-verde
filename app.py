@@ -16,6 +16,27 @@ st.markdown(
         font-size: 32px;
         font-weight: 700;
     }
+    .header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+    .header-title {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+    }
+    .header-subtitle {
+        font-size: 15px;
+        line-height: 1.4;
+        margin: 0;
+    }
+    @media (max-width: 768px) {
+        .header-title {
+            font-size: 28px;
+        }
+    }
     .section-title {
         font-size: 24px;
         font-weight: 700;
@@ -271,17 +292,24 @@ co2_evitado_t_periodo = co2_evitado_kg_periodo / 1000
 
 
 # ----------------- TÍTULO E RESUMO PRINCIPAL -----------------
-header_col1, header_col2 = st.columns([4, 1])
+header_col1, header_col2 = st.columns([5, 1])
 
 with header_col1:
-    st.title("⚡ Calculadora de Economia – Energia Verde")
-    st.write(
-        "Ferramenta para o time comercial mostrar, em poucos segundos, "
-        "a economia financeira e o impacto ambiental da energia verde."
+    st.markdown(
+        """
+        <div class="header-text">
+            <div class="header-title">⚡ Calculadora de Economia – Energia Verde</div>
+            <div class="header-subtitle">
+                Ferramenta para o time comercial mostrar, em poucos segundos,
+                a economia financeira e o impacto ambiental da energia verde.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 with header_col2:
-    st.image("prospera_logo.png", use_column_width=True)
+    st.image("prospera_logo.png", width=120)
 
 st.markdown("---")
 
