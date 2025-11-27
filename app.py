@@ -74,7 +74,7 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     # Subtítulo
     pdf.set_font("Arial", "", 11)
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(
             "Resumo da economia financeira e do impacto ambiental estimado para este cliente."
@@ -121,19 +121,19 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
 
     pdf.set_font("Arial", "", 12)
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(f"Desconto aplicado: {dados['desconto']}%"),
     )
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(
             f"Cobertura energia verde: {dados['cobertura']}% da conta"
         ),
     )
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(
             f"Parte variavel considerada: {dados['parte_variavel']}% da conta"
@@ -147,14 +147,14 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
 
     pdf.set_font("Arial", "", 12)
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(
             f"Fator de emissao adotado: {dados['fator_co2']} kg CO2e/kWh"
         ),
     )
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(
             f"CO2 evitado em {dados['periodo_meses']} meses: {dados['co2_periodo_t']} t CO2e"
@@ -165,7 +165,7 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     # Observação
     pdf.set_font("Arial", "I", 10)
     pdf.multi_cell(
-        0,
+        pdf.epw,
         6,
         texto_pdf_safe(
             "Simulacao estimada. Para inventarios oficiais (GHG Protocol), "
@@ -174,8 +174,8 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     )
 
     # Retorna bytes do PDF
-    pdf_bytes = pdf.output(dest="S").encode("latin-1")
-    return pdf_bytes
+    pdf_bytes = pdf.output(dest="S")
+    return bytes(pdf_bytes)
 
 
 # ----------------- SIDEBAR – ENTRADAS -----------------
