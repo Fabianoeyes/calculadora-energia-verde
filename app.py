@@ -1,6 +1,5 @@
 import streamlit as st
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
+from fpdf import FPDF
 
 # ----------------- CONFIGURAÇÃO BÁSICA -----------------
 st.set_page_config(
@@ -44,154 +43,102 @@ def format_number_br(valor: float, decimals: int = 0) -> str:
     return fmt.format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def gerar_imagem_resumo(dados: dict) -> bytes:
+def gerar_relatorio_pdf(dados: dict) -> bytes:
     """
-    Gera uma imagem em formato de card (900x1200),
-    com logo da Prospera e resumo da simulação.
-    Ideal para enviar pelo WhatsApp.
+    Gera um PDF em memória com o resumo da simulação.
+    Usa apenas caracteres compatíveis com Latin-1 (sem emojis/CO₂ subscrito).
     """
-    # Tamanho do card
-    largura, altura = 900, 1200
-    bg_color = (15, 23, 42)     # fundo escuro
-    text_color = (255, 255, 255)
-    accent_color = (56, 189, 248)
-    secondary_color = (148, 163, 184)
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
 
-    img = Image.new("RGB", (largura, altura), bg_color)
-    draw = ImageDraw.Draw(img)
-
-    # Fontes
+    # Logo Prospera (canto superior direito)
     try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 48)
-        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 30)
-        font_body = ImageFont.truetype("DejaVuSans.ttf", 26)
+        # coordenadas em mm (padrão FPDF, página A4 ~ 210 x 297 mm)
+        pdf.image("prospera_logo.png", x=165, y=8, w=30)
     except Exception:
-        font_title = ImageFont.load_default()
-        font_sub = ImageFont.load_default()
-        font_body = ImageFont.load_default()
-
-    # --- Logo Prospera (canto superior direito) ---
-    try:
-        logo = Image.open("prospera_logo.png").convert("RGBA")
-        logo_width = 140
-        ratio = logo_width / logo.width
-        logo = logo.resize((logo_width, int(logo.height * ratio)), Image.LANCZOS)
-
-        pos_logo = (largura - logo_width - 40, 40)  # margem 40 px
-        img.paste(logo, pos_logo, logo)
-    except Exception:
-        # Se não achar o logo, segue sem quebrar
+        # se não encontrar o logo, continua sem quebrar
         pass
 
-    # --- Título ---
-    titulo = "Calculadora de Economia – Energia Verde"
-    x_titulo, y_titulo = 40, 60
-    draw.text((x_titulo, y_titulo), titulo, font=font_title, fill=accent_color)
+    # Título
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "Calculadora de Economia - Energia Verde", ln=True)
+    pdf.ln(2)
 
-    # --- Bloco principal ---
-    y = 160
-    draw.text(
-        (40, y),
-        f"Conta atual: {dados['valor_conta']}",
-        font=font_sub,
-        fill=text_color,
+    # Subtítulo
+    pdf.set_font("Arial", "", 11)
+    pdf.multi_cell(
+        0,
+        6,
+        "Resumo da economia financeira e do impacto ambiental estimado para este cliente.",
     )
-    y += 40
-    draw.text(
-        (40, y),
-        f"Nova conta aproximada: {dados['nova_conta']}",
-        font=font_sub,
-        fill=text_color,
-    )
-    y += 70
+    pdf.ln(4)
 
-    draw.text(
-        (40, y),
-        f"Economia mensal estimada: {dados['economia_mensal']}",
-        font=font_body,
-        fill=text_color,
-    )
-    y += 35
-    draw.text(
-        (40, y),
+    # Dados principais
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Resumo da simulacao", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 7, f"Conta atual: {dados['valor_conta']}", ln=True)
+    pdf.cell(0, 7, f"Nova conta aproximada: {dados['nova_conta']}", ln=True)
+    pdf.ln(2)
+    pdf.cell(0, 7, f"Economia mensal estimada: {dados['economia_mensal']}", ln=True)
+    pdf.cell(
+        0,
+        7,
         f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}",
-        font=font_body,
-        fill=text_color,
+        ln=True,
     )
-    y += 60
+    pdf.ln(6)
 
-    # --- Parâmetros financeiros ---
-    draw.text(
-        (40, y),
-        "Parâmetros financeiros:",
-        font=font_sub,
-        fill=accent_color,
-    )
-    y += 40
-    draw.text(
-        (40, y),
+    # Parametros financeiros
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Parametros financeiros", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.multi_cell(
+        0,
+        6,
         f"- Desconto aplicado: {dados['desconto']}%",
-        font=font_body,
-        fill=text_color,
     )
-    y += 30
-    draw.text(
-        (40, y),
-        f"- Cobertura energia verde: {dados['cobertura']}% da conta",
-        font=font_body,
-        fill=text_color,
+    pdf.multi_cell(
+        0,
+        6,
+        f"- Cobertura de energia verde: {dados['cobertura']}% da conta",
     )
-    y += 30
-    draw.text(
-        (40, y),
-        f"- Parte variável considerada: {dados['parte_variavel']}% da conta",
-        font=font_body,
-        fill=text_color,
+    pdf.multi_cell(
+        0,
+        6,
+        f"- Parte variavel considerada: {dados['parte_variavel']}% da conta",
     )
-    y += 60
+    pdf.ln(4)
 
-    # --- Impacto ambiental ---
-    draw.text(
-        (40, y),
-        "Impacto ambiental estimado:",
-        font=font_sub,
-        fill=accent_color,
+    # Impacto ambiental
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Impacto ambiental estimado", ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.multi_cell(
+        0,
+        6,
+        f"- Fator de emissao adotado: {dados['fator_co2']} kg CO2e/kWh",
     )
-    y += 40
-    draw.text(
-        (40, y),
-        f"- Fator de emissão: {dados['fator_co2']} kg CO₂e/kWh",
-        font=font_body,
-        fill=text_color,
+    pdf.multi_cell(
+        0,
+        6,
+        f"- CO2 evitado em {dados['periodo_meses']} meses: {dados['co2_periodo_t']} t CO2e",
     )
-    y += 30
-    draw.text(
-        (40, y),
-        f"- CO₂ evitado em {dados['periodo_meses']} meses:",
-        font=font_body,
-        fill=text_color,
-    )
-    y += 30
-    draw.text(
-        (60, y),
-        f"{dados['co2_periodo_t']} t CO₂e",
-        font=font_body,
-        fill=accent_color,
+    pdf.ln(6)
+
+    # Observacao
+    pdf.set_font("Arial", "I", 11)
+    pdf.multi_cell(
+        0,
+        6,
+        "Simulacao estimada. Para inventarios oficiais (GHG Protocol), "
+        "use fatores de emissao oficiais da regiao e da fonte de energia do cliente.",
     )
 
-    # --- Rodapé ---
-    rodape = (
-        "Simulação estimada. Para inventários oficiais (GHG Protocol), "
-        "use fatores de emissão da região do cliente."
-    )
-    y_rodape = altura - 90
-    draw.text((40, y_rodape), rodape, font=font_body, fill=secondary_color)
-
-    # Exporta para bytes
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return buffer.getvalue()
+    # Retorna bytes do PDF
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    return pdf_bytes
 
 
 # ----------------- SIDEBAR – ENTRADAS -----------------
@@ -357,16 +304,16 @@ st.info(
     "aprovados e ajustados à fonte de energia e à região do cliente."
 )
 
-# ----------------- COMPARTILHAR COM O CLIENTE (IMAGEM) -----------------
+# ----------------- RELATÓRIO EM PDF -----------------
 st.markdown("---")
-st.markdown("### 📲 Compartilhar com o cliente")
+st.markdown("### 📄 Relatório em PDF")
 
 st.write(
-    "Clique no botão abaixo para gerar uma **imagem em PNG** com o resumo da simulação. "
-    "Depois é só baixar e enviar pelo WhatsApp para o cliente."
+    "Clique no botão abaixo para gerar um **PDF com o resumo da simulação**, "
+    "incluindo logo da Prospera. Você pode enviar esse PDF diretamente pelo WhatsApp."
 )
 
-dados_para_imagem = {
+dados_para_pdf = {
     "valor_conta": format_currency_br(valor_conta),
     "nova_conta": format_currency_br(nova_conta),
     "economia_mensal": format_currency_br(economia_mensal),
@@ -379,15 +326,12 @@ dados_para_imagem = {
     "co2_periodo_t": format_number_br(co2_evitado_t_periodo, 2),
 }
 
-if st.button("Gerar imagem para WhatsApp"):
-    img_bytes = gerar_imagem_resumo(dados_para_imagem)
-
-    # prévia menor na tela, mas o arquivo continua em alta
-    st.image(img_bytes, caption="Resumo da simulação", width=400)
+if st.button("Gerar relatório em PDF"):
+    pdf_bytes = gerar_relatorio_pdf(dados_para_pdf)
 
     st.download_button(
-        label="⬇️ Baixar imagem (PNG)",
-        data=img_bytes,
-        file_name="resumo_energia_verde.png",
-        mime="image/png",
+        label="⬇️ Baixar relatório (PDF)",
+        data=pdf_bytes,
+        file_name="relatorio_energia_verde_prospera.pdf",
+        mime="application/pdf",
     )
