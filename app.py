@@ -271,11 +271,17 @@ co2_evitado_t_periodo = co2_evitado_kg_periodo / 1000
 
 
 # ----------------- TÍTULO E RESUMO PRINCIPAL -----------------
-st.title("⚡ Calculadora de Economia – Energia Verde")
-st.write(
-    "Ferramenta para o time comercial mostrar, em poucos segundos, "
-    "a economia financeira e o impacto ambiental da energia verde."
-)
+header_col1, header_col2 = st.columns([4, 1])
+
+with header_col1:
+    st.title("⚡ Calculadora de Economia – Energia Verde")
+    st.write(
+        "Ferramenta para o time comercial mostrar, em poucos segundos, "
+        "a economia financeira e o impacto ambiental da energia verde."
+    )
+
+with header_col2:
+    st.image("prospera_logo.png", use_column_width=True)
 
 st.markdown("---")
 
