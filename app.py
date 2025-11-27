@@ -105,6 +105,7 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     linha_rotulo_valor(
         f"Economia em {dados['periodo_meses']} meses", dados["economia_periodo"]
     )
+    linha_rotulo_valor("Pontos Ecoa gerados/mês", dados["pontos_ecoa_mes"])
     pdf.ln(4)
 
     # Parâmetros financeiros
@@ -136,8 +137,10 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
         pdf.epw,
         5.5,
         texto_pdf_safe(
-            "Simulacao estimada. Para inventarios oficiais (GHG Protocol), "
-            "use fatores de emissao oficiais da regiao e da fonte de energia do cliente."
+            "Simulacao estimada. Metodologia: kWh economizados x fator de emissao "
+            "(kg CO2e/kWh), convertendo para toneladas. Para inventarios oficiais "
+            "(GHG Protocol Escopo 2, abordagens location-based/market-based), "
+            "use fatores aprovados da regiao e da fonte de energia do cliente."
         ),
     )
 
@@ -241,6 +244,10 @@ economia_total_periodo = economia_mensal * periodo_meses
 # Nova conta aproximada
 nova_conta = max(valor_conta - economia_mensal, 0)
 
+# Pontos Ecoa (cada R$ 0,03 de economia mensal = 1 ponto)
+valor_ponto_ecoa = 0.03
+pontos_ecoa_mes = economia_mensal / valor_ponto_ecoa if valor_ponto_ecoa else 0
+
 # Consumo estimado (kWh/mês) da parte variável
 if tarifa_media > 0:
     consumo_kwh_mes = valor_parte_variavel / tarifa_media
@@ -264,7 +271,7 @@ st.write(
 
 st.markdown("---")
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown("**Economia mensal estimada**")
     st.markdown(
@@ -281,6 +288,12 @@ with col3:
     st.markdown("**Nova conta aproximada**")
     st.markdown(
         f"<div class='big-metric'>{format_currency_br(nova_conta)}</div>",
+        unsafe_allow_html=True,
+    )
+with col4:
+    st.markdown("**Pontos Ecoa gerados/mês**")
+    st.markdown(
+        f"<div class='big-metric'>{format_number_br(pontos_ecoa_mes, 0)}</div>",
         unsafe_allow_html=True,
     )
 
@@ -300,6 +313,7 @@ with col_fin:
         - Economia mensal estimada: **{format_currency_br(economia_mensal)}**
         - Economia em {periodo_meses} meses: **{format_currency_br(economia_total_periodo)}**
         - Nova conta aproximada: **{format_currency_br(nova_conta)}**
+        - Pontos Ecoa gerados/mês: **{format_number_br(pontos_ecoa_mes, 0)} pontos**
         """
     )
 
@@ -316,9 +330,10 @@ with col_amb:
     )
 
 st.info(
-    "⚠️ **Importante:** os fatores de emissão usados são aproximados. "
-    "Para relatórios oficiais (ex.: inventário GHG Protocol), utilize fatores "
-    "aprovados e ajustados à fonte de energia e à região do cliente."
+    "⚠️ **Importante:** metodologia de CO₂: kWh economizados x fator de emissão "
+    "(kg CO₂e/kWh), convertido para toneladas, alinhado ao GHG Protocol para "
+    "escopo 2 (location-based ou market-based). Use fatores oficiais da "
+    "distribuidora/região para relatórios formais."
 )
 
 # ----------------- RELATÓRIO EM PDF -----------------
@@ -339,6 +354,7 @@ dados_para_pdf = {
     "desconto": desconto_percent,
     "cobertura": cobertura_percent,
     "parte_variavel": parte_variavel_percent,
+    "pontos_ecoa_mes": format_number_br(pontos_ecoa_mes, 0),
     "fator_co2": format_number_br(fator_emissao_kg_kwh, 2),
     "co2_periodo_t": format_number_br(co2_evitado_t_periodo, 2),
 }
