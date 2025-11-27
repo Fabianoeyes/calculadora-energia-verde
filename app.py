@@ -46,102 +46,146 @@ def format_number_br(valor: float, decimals: int = 0) -> str:
 
 def gerar_imagem_resumo(dados: dict) -> bytes:
     """
-    Gera uma imagem PNG com o resumo da simulação
-    (pensado para compartilhar no WhatsApp).
+    Gera uma imagem em formato de card (900x1200),
+    com logo da Prospera e resumo da simulação.
+    Ideal para enviar pelo WhatsApp.
     """
-    largura, altura = 1080, 1350
+    # Tamanho do card
+    largura, altura = 900, 1200
     bg_color = (15, 23, 42)     # fundo escuro
     text_color = (255, 255, 255)
     accent_color = (56, 189, 248)
+    secondary_color = (148, 163, 184)
 
     img = Image.new("RGB", (largura, altura), bg_color)
     draw = ImageDraw.Draw(img)
 
-    # Tenta usar uma fonte TTF do sistema; se não achar, usa a padrão
+    # Fontes
     try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
-        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
-        font_body = ImageFont.truetype("DejaVuSans.ttf", 34)
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 48)
+        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 30)
+        font_body = ImageFont.truetype("DejaVuSans.ttf", 26)
     except Exception:
         font_title = ImageFont.load_default()
         font_sub = ImageFont.load_default()
         font_body = ImageFont.load_default()
 
-    # Título
+    # --- Logo Prospera (canto superior direito) ---
+    try:
+        logo = Image.open("prospera_logo.png").convert("RGBA")
+        logo_width = 140
+        ratio = logo_width / logo.width
+        logo = logo.resize((logo_width, int(logo.height * ratio)), Image.LANCZOS)
+
+        pos_logo = (largura - logo_width - 40, 40)  # margem 40 px
+        img.paste(logo, pos_logo, logo)
+    except Exception:
+        # Se não achar o logo, segue sem quebrar
+        pass
+
+    # --- Título ---
     titulo = "Calculadora de Economia – Energia Verde"
-    draw.text((60, 60), titulo, font=font_title, fill=accent_color)
+    x_titulo, y_titulo = 40, 60
+    draw.text((x_titulo, y_titulo), titulo, font=font_title, fill=accent_color)
 
-    # Cliente / conta
+    # --- Bloco principal ---
     y = 160
-    draw.text((60, y), f"Conta atual: {dados['valor_conta']}", font=font_sub, fill=text_color)
-    y += 60
-    draw.text((60, y), f"Nova conta aproximada: {dados['nova_conta']}", font=font_sub, fill=text_color)
-    y += 80
-
-    # Economia
-    draw.text((60, y), f"Economia mensal estimada: {dados['economia_mensal']}", font=font_body, fill=text_color)
-    y += 50
     draw.text(
-        (60, y),
-        f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}",
-        font=font_body,
-        fill=text_color,
-    )
-    y += 80
-
-    # Parâmetros
-    draw.text((60, y), "Parâmetros financeiros:", font=font_sub, fill=accent_color)
-    y += 50
-    draw.text(
-        (60, y),
-        f"- Desconto aplicado: {dados['desconto']}%",
-        font=font_body,
+        (40, y),
+        f"Conta atual: {dados['valor_conta']}",
+        font=font_sub,
         fill=text_color,
     )
     y += 40
     draw.text(
-        (60, y),
-        f"- Cobertura energia verde: {dados['cobertura']}% da conta",
-        font=font_body,
-        fill=text_color,
-    )
-    y += 40
-    draw.text(
-        (60, y),
-        f"- Parte variável considerada: {dados['parte_variavel']}% da conta",
-        font=font_body,
+        (40, y),
+        f"Nova conta aproximada: {dados['nova_conta']}",
+        font=font_sub,
         fill=text_color,
     )
     y += 70
 
-    # Impacto ambiental
-    draw.text((60, y), "Impacto ambiental estimado:", font=font_sub, fill=accent_color)
-    y += 50
     draw.text(
-        (60, y),
+        (40, y),
+        f"Economia mensal estimada: {dados['economia_mensal']}",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 35
+    draw.text(
+        (40, y),
+        f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 60
+
+    # --- Parâmetros financeiros ---
+    draw.text(
+        (40, y),
+        "Parâmetros financeiros:",
+        font=font_sub,
+        fill=accent_color,
+    )
+    y += 40
+    draw.text(
+        (40, y),
+        f"- Desconto aplicado: {dados['desconto']}%",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 30
+    draw.text(
+        (40, y),
+        f"- Cobertura energia verde: {dados['cobertura']}% da conta",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 30
+    draw.text(
+        (40, y),
+        f"- Parte variável considerada: {dados['parte_variavel']}% da conta",
+        font=font_body,
+        fill=text_color,
+    )
+    y += 60
+
+    # --- Impacto ambiental ---
+    draw.text(
+        (40, y),
+        "Impacto ambiental estimado:",
+        font=font_sub,
+        fill=accent_color,
+    )
+    y += 40
+    draw.text(
+        (40, y),
         f"- Fator de emissão: {dados['fator_co2']} kg CO₂e/kWh",
         font=font_body,
         fill=text_color,
     )
-    y += 40
+    y += 30
     draw.text(
-        (60, y),
+        (40, y),
         f"- CO₂ evitado em {dados['periodo_meses']} meses:",
         font=font_body,
         fill=text_color,
     )
-    y += 40
+    y += 30
     draw.text(
-        (80, y),
+        (60, y),
         f"{dados['co2_periodo_t']} t CO₂e",
         font=font_body,
         fill=accent_color,
     )
 
-    # Rodapé
-    rodape = "Simulação estimada. Para inventários oficiais (GHG Protocol), use fatores de emissão da região do cliente."
-    y_rodape = altura - 160
-    draw.text((60, y_rodape), rodape, font=font_body, fill=(148, 163, 184))
+    # --- Rodapé ---
+    rodape = (
+        "Simulação estimada. Para inventários oficiais (GHG Protocol), "
+        "use fatores de emissão da região do cliente."
+    )
+    y_rodape = altura - 90
+    draw.text((40, y_rodape), rodape, font=font_body, fill=secondary_color)
 
     # Exporta para bytes
     buffer = BytesIO()
@@ -259,7 +303,10 @@ st.markdown("---")
 col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("**Economia mensal estimada**")
-    st.markdown(f"<div class='big-metric'>{format_currency_br(economia_mensal)}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='big-metric'>{format_currency_br(economia_mensal)}</div>",
+        unsafe_allow_html=True,
+    )
 with col2:
     st.markdown(f"**Economia em {periodo_meses} meses**")
     st.markdown(
@@ -268,7 +315,10 @@ with col2:
     )
 with col3:
     st.markdown("**Nova conta aproximada**")
-    st.markdown(f"<div class='big-metric'>{format_currency_br(nova_conta)}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='big-metric'>{format_currency_br(nova_conta)}</div>",
+        unsafe_allow_html=True,
+    )
 
 st.markdown("---")
 
@@ -331,7 +381,10 @@ dados_para_imagem = {
 
 if st.button("Gerar imagem para WhatsApp"):
     img_bytes = gerar_imagem_resumo(dados_para_imagem)
-    st.image(img_bytes, caption="Resumo da simulação")
+
+    # prévia menor na tela, mas o arquivo continua em alta
+    st.image(img_bytes, caption="Resumo da simulação", width=400)
+
     st.download_button(
         label="⬇️ Baixar imagem (PNG)",
         data=img_bytes,
