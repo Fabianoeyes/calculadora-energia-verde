@@ -1,52 +1,63 @@
 import streamlit as st
-import math
-from fpdf import FPDF
 
-# --------------------------
-# Configuração da página
-# --------------------------
+# ----------------- CONFIGURAÇÃO BÁSICA -----------------
 st.set_page_config(
     page_title="Calculadora de Economia – Energia Verde",
     page_icon="⚡",
-    layout="centered"
+    layout="wide",
 )
 
-# --------------------------
-# Título / Cabeçalho
-# --------------------------
+# Estilo simples para deixar mais bonito
 st.markdown(
     """
-    <h1 style="text-align:center; margin-bottom:0;">⚡ Calculadora de Economia – Energia Verde</h1>
-    <p style="text-align:center; font-size:16px; color:#555;">
-        Ferramenta para o time comercial mostrar, em poucos segundos, 
-        a economia financeira e o impacto ambiental da energia verde.
-    </p>
-    <hr>
+    <style>
+    .big-metric {
+        font-size: 32px;
+        font-weight: 700;
+    }
+    .section-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-top: 1rem;
+    }
+    .subsection-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
-# --------------------------
-# Sidebar – parâmetros de entrada
-# --------------------------
-st.sidebar.header("📥 Dados do Cliente")
+
+# ----------------- FUNÇÕES AUXILIARES -----------------
+def format_currency_br(valor: float) -> str:
+    """Formata número em formato de moeda brasileira: R$ 1.234,56"""
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def format_number_br(valor: float, decimals: int = 0) -> str:
+    fmt = f"{{:,.{decimals}f}}"
+    return fmt.format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# ----------------- SIDEBAR – ENTRADAS -----------------
+st.sidebar.title("📊 Dados do Cliente")
 
 valor_conta = st.sidebar.number_input(
     "Valor atual da conta de luz (R$)",
     min_value=0.0,
     value=1500.0,
     step=50.0,
-    format="%.2f",
-    help="Informe o valor TOTAL médio da fatura de energia do cliente."
 )
 
 desconto_percent = st.sidebar.slider(
     "% de desconto na energia consumida",
     min_value=0,
-    max_value=30,
+    max_value=100,
     value=15,
     step=1,
-    help="Por padrão 15%, mas pode ajustar conforme a proposta comercial."
 )
 
 cobertura_percent = st.sidebar.slider(
@@ -55,242 +66,135 @@ cobertura_percent = st.sidebar.slider(
     max_value=100,
     value=80,
     step=5,
-    help="Normalmente usamos 80% porque ~20% é custo fixo da distribuidora."
 )
 
 periodo_meses = st.sidebar.number_input(
     "Período para simulação (meses)",
     min_value=1,
+    max_value=60,
     value=12,
-    step=1
+    step=1,
 )
 
 tarifa_media = st.sidebar.number_input(
     "Tarifa média (R$/kWh)",
-    min_value=0.10,
+    min_value=0.01,
     value=0.95,
-    step=0.05,
-    format="%.2f",
-    help="Estimativa do valor médio do kWh na região do cliente."
+    step=0.01,
 )
 
-st.sidebar.markdown("---")
-st.sidebar.caption("Preencha os dados e veja o resultado em tempo real na tela principal.")
+st.sidebar.markdown(
+    """
+    _Preencha os dados e veja o resultado em tempo real na tela principal._
+    """
+)
 
-# --------------------------
-# Parâmetros de CO₂ (ajustáveis)
-# --------------------------
-with st.expander("🌱 Parâmetros de CO₂ (avançado)"):
-    st.write(
-        "Aqui usamos fatores médios de emissão para ilustrar o impacto ambiental. "
-        "Esses valores podem ser ajustados conforme estudos ou inventários (ex.: GHG Protocol)."
+# ----------------- PARÂMETROS DE CO2 (AVANÇADO) -----------------
+with st.expander("🌱 Parâmetros de CO₂ (avançado)", expanded=False):
+    st.markdown(
+        """
+        Aqui você define o **fator de emissão da energia da rede**.
+
+        - Use um valor de **kg CO₂e por kWh** consumido da rede.
+        - Para relatórios alinhados ao **GHG Protocol**, utilize o fator oficial
+          da distribuidora/região (escopo 2, abordagem location-based ou market-based).
+        """
     )
-    fator_convencional = st.number_input(
-        "Fator de emissão da energia convencional (kg CO₂e / kWh)",
+
+    fator_emissao_kg_kwh = st.number_input(
+        "Fator de emissão da rede (kg CO₂e/kWh)",
         min_value=0.0,
-        value=0.40,  # Exemplo genérico
-        step=0.05
-    )
-    fator_energia_verde = st.number_input(
-        "Fator de emissão da energia verde (kg CO₂e / kWh)",
-        min_value=0.0,
-        value=0.05,  # Exemplo genérico
-        step=0.01
+        value=0.35,  # valor ilustrativo; ajuste conforme sua realidade/fornecedor
+        step=0.01,
     )
 
-# --------------------------
-# Cálculos principais
-# --------------------------
+# ----------------- CÁLCULOS -----------------
+# Parte variável considerada (ex.: 80% da conta)
+parte_variavel_percent = 80
+valor_parte_variavel = valor_conta * (parte_variavel_percent / 100)
 
-# Parte variável da conta (80% do total)
-parte_variavel = valor_conta * 0.8
+# Parte da conta coberta pela energia verde (em R$)
+valor_coberto_verde = valor_parte_variavel * (cobertura_percent / 100)
 
-# Economia mensal em R$
-economia_mensal = parte_variavel * (desconto_percent / 100) * (cobertura_percent / 100)
-
-# Nova conta estimada
-nova_conta = valor_conta - economia_mensal
+# Economia mensal em R$ (desconto sobre a parte coberta pela energia verde)
+economia_mensal = valor_coberto_verde * (desconto_percent / 100)
 
 # Economia total no período
-economia_periodo = economia_mensal * periodo_meses
+economia_total_periodo = economia_mensal * periodo_meses
 
-# Estimativa de consumo em kWh (parte variável / tarifa média)
+# Nova conta aproximada
+nova_conta = max(valor_conta - economia_mensal, 0)
+
+# Consumo estimado (kWh/mês) da parte variável
 if tarifa_media > 0:
-    kwh_consumidos = parte_variavel / tarifa_media
+    consumo_kwh_mes = valor_parte_variavel / tarifa_media
+    kwh_economizados_mes = economia_mensal / tarifa_media
 else:
-    kwh_consumidos = 0.0
+    consumo_kwh_mes = 0.0
+    kwh_economizados_mes = 0.0
 
-# kWh economizados (considerando desconto e cobertura)
-kwh_economizados = kwh_consumidos * (desconto_percent / 100) * (cobertura_percent / 100)
+# CO2 evitado (kg e toneladas)
+co2_evitado_kg_mes = kwh_economizados_mes * fator_emissao_kg_kwh
+co2_evitado_kg_periodo = co2_evitado_kg_mes * periodo_meses
+co2_evitado_t_periodo = co2_evitado_kg_periodo / 1000
 
-# CO₂ evitado (comparando energia convencional vs verde)
-co2_convencional_kg = kwh_economizados * fator_convencional
-co2_verde_kg = kwh_economizados * fator_energia_verde
-co2_evitar_kg = max(co2_convencional_kg - co2_verde_kg, 0)
-co2_evitar_t = co2_evitar_kg / 1000  # toneladas
 
-# --------------------------
-# Layout de resultados
-# --------------------------
-
-col1, col2, col3 = st.columns(3)
-
-def formata_reais(valor: float) -> str:
-    texto = f"R$ {valor:,.2f}"
-    return texto.replace(",", "X").replace(".", ",").replace("X", ".")
-
-with col1:
-    st.metric(
-        "Economia mensal estimada",
-        formata_reais(economia_mensal),
-    )
-
-with col2:
-    st.metric(
-        f"Economia em {periodo_meses} meses",
-        formata_reais(economia_periodo),
-    )
-
-with col3:
-    st.metric(
-        "Nova conta aproximada",
-        formata_reais(nova_conta),
-    )
+# ----------------- TÍTULO E RESUMO PRINCIPAL -----------------
+st.title("⚡ Calculadora de Economia – Energia Verde")
+st.write(
+    "Ferramenta para o time comercial mostrar, em poucos segundos, "
+    "a economia financeira e o impacto ambiental da energia verde."
+)
 
 st.markdown("---")
 
-col4, col5 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.markdown("**Economia mensal estimada**")
+    st.markdown(f"<div class='big-metric'>{format_currency_br(economia_mensal)}</div>", unsafe_allow_html=True)
+with col2:
+    st.markdown(f"**Economia em {periodo_meses} meses**")
+    st.markdown(
+        f"<div class='big-metric'>{format_currency_br(economia_total_periodo)}</div>",
+        unsafe_allow_html=True,
+    )
+with col3:
+    st.markdown("**Nova conta aproximada**")
+    st.markdown(f"<div class='big-metric'>{format_currency_br(nova_conta)}</div>", unsafe_allow_html=True)
 
-with col4:
-    st.subheader("💰 Resumo financeiro")
-    st.write(
-        f"- Valor atual da conta: **{formata_reais(valor_conta)}**\n"
-        f"- Parte variável considerada (80%): **{formata_reais(parte_variavel)}**\n"
-        f"- Desconto aplicado: **{desconto_percent}%**\n"
-        f"- Cobertura de energia verde: **{cobertura_percent}% da conta**\n"
-        f"- Economia mensal estimada: **{formata_reais(economia_mensal)}**\n"
-        f"- Economia em **{periodo_meses} meses**: **{formata_reais(economia_periodo)}**\n"
-        f"- Nova conta aproximada: **{formata_reais(nova_conta)}**"
+st.markdown("---")
+
+# ----------------- DETALHAMENTO – RESUMO FINANCEIRO & IMPACTO -----------------
+col_fin, col_amb = st.columns(2)
+
+with col_fin:
+    st.markdown("### 💰 Resumo financeiro")
+    st.markdown(
+        f"""
+        - Valor atual da conta: **{format_currency_br(valor_conta)}**
+        - Parte variável considerada ({parte_variavel_percent}%): **{format_currency_br(valor_parte_variavel)}**
+        - Desconto aplicado: **{desconto_percent}%**
+        - Cobertura de energia verde: **{cobertura_percent}% da conta**
+        - Economia mensal estimada: **{format_currency_br(economia_mensal)}**
+        - Economia em {periodo_meses} meses: **{format_currency_br(economia_total_periodo)}**
+        - Nova conta aproximada: **{format_currency_br(nova_conta)}**
+        """
     )
 
-with col5:
-    st.subheader("🌎 Impacto ambiental (estimado)")
-    st.write(
-        f"- Consumo estimado (parte variável): **{kwh_consumidos:,.0f} kWh/mês**\n"
-        f"- kWh economizados com energia verde: **{kwh_economizados:,.0f} kWh/mês**\n"
-        f"- CO₂ evitado por mês: **{co2_evitar_kg:,.1f} kg CO₂e**\n"
-        f"- CO₂ evitado em {periodo_meses} meses: **{co2_evitar_t * periodo_meses:,.2f} t CO₂e**"
+with col_amb:
+    st.markdown("### 🌍 Impacto ambiental (estimado)")
+    st.markdown(
+        f"""
+        - Consumo estimado (parte variável): **{format_number_br(consumo_kwh_mes, 0)} kWh/mês**
+        - kWh economizados com energia verde: **{format_number_br(kwh_economizados_mes, 0)} kWh/mês**
+        - Fator de emissão adotado: **{format_number_br(fator_emissao_kg_kwh, 2)} kg CO₂e/kWh**
+        - CO₂ evitado por mês: **{format_number_br(co2_evitado_kg_mes, 1)} kg CO₂e**
+        - CO₂ evitado em {periodo_meses} meses: **{format_number_br(co2_evitado_t_periodo, 2)} t CO₂e**
+        """
     )
 
 st.info(
-    "🔍 **Observação:** os fatores de emissão usados são aproximados. "
-    "Para relatórios oficiais (ex.: inventário GHG Protocol), use fatores aprovados "
-    "e ajustados à fonte de energia e à região do cliente."
-)
-
-st.markdown("---")
-
-# --------------------------
-# Geração de relatório em PDF
-# --------------------------
-
-def gerar_pdf(
-    valor_conta,
-    desconto_percent,
-    cobertura_percent,
-    periodo_meses,
-    tarifa_media,
-    economia_mensal,
-    economia_periodo,
-    nova_conta,
-    kwh_consumidos,
-    kwh_economizados,
-    co2_evitar_t,
-):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "Relatorio - Calculadora de Energia Verde", ln=True)
-
-    pdf.set_font("Helvetica", "", 12)
-    pdf.ln(5)
-    pdf.multi_cell(
-        0, 7,
-        "Este relatorio apresenta a estimativa de economia financeira e impacto "
-        "ambiental relacionados à contratacao de energia verde."
-    )
-
-    pdf.ln(5)
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.cell(0, 8, "Dados informados", ln=True)
-
-    pdf.set_font("Helvetica", "", 12)
-    pdf.multi_cell(
-        0, 7,
-        f"• Valor atual da conta: R$ {valor_conta:,.2f}\n"
-        f"• Desconto na energia consumida: {desconto_percent}%\n"
-        f"• Cobertura de energia verde: {cobertura_percent}% da conta\n"
-        f"• Periodo considerado: {periodo_meses} meses\n"
-        f"• Tarifa media estimada: R$ {tarifa_media:.2f} / kWh\n"
-    )
-
-    pdf.ln(3)
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.cell(0, 8, "Resultados financeiros", ln=True)
-
-    pdf.set_font("Helvetica", "", 12)
-    pdf.multi_cell(
-        0, 7,
-        f"• Economia mensal estimada: R$ {economia_mensal:,.2f}\n"
-        f"• Economia acumulada em {periodo_meses} meses: R$ {economia_periodo:,.2f}\n"
-        f"• Nova conta aproximada: R$ {nova_conta:,.2f}\n"
-    )
-
-    pdf.ln(3)
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.cell(0, 8, "Impacto ambiental estimado", ln=True)
-
-    pdf.set_font("Helvetica", "", 12)
-    pdf.multi_cell(
-        0, 7,
-        f"• Consumo estimado (parte variavel): {kwh_consumidos:,.0f} kWh/mês\n"
-        f"• kWh economizados com energia verde: {kwh_economizados:,.0f} kWh/mês\n"
-        f"• CO2 evitado em {periodo_meses} meses: {co2_evitar_t * periodo_meses:,.2f} t CO2e\n"
-        "\n"
-        "Importante: estes valores sao estimativas com base em fatores medios de emissao. "
-        "Para relatorios corporativos oficiais (ex.: GHG Protocol), e recomendado usar "
-        "fatores de emissao atualizados e validados para a regiao e a fonte de energia."
-    )
-
-    return pdf.output(dest="S").encode("latin-1")
-
-
-st.subheader("📄 Relatório em PDF")
-
-st.write(
-    "Clique no botão abaixo para baixar um relatório em PDF com o resumo da economia "
-    "financeira e do impacto ambiental estimado para este cliente."
-)
-
-pdf_bytes = gerar_pdf(
-    valor_conta,
-    desconto_percent,
-    cobertura_percent,
-    periodo_meses,
-    tarifa_media,
-    economia_mensal,
-    economia_periodo,
-    nova_conta,
-    kwh_consumidos,
-    kwh_economizados,
-    co2_evitar_t,
-)
-
-st.download_button(
-    label="📥 Baixar relatório em PDF",
-    data=pdf_bytes,
-    file_name="relatorio_energia_verde.pdf",
-    mime="application/pdf",
+    "⚠️ **Importante:** os fatores de emissão usados são aproximados. "
+    "Para relatórios oficiais (ex.: inventário GHG Protocol), utilize fatores "
+    "aprovados e ajustados à fonte de energia e à região do cliente."
 )
