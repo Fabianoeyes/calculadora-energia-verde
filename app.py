@@ -106,6 +106,12 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
         f"Economia em {dados['periodo_meses']} meses", dados["economia_periodo"]
     )
     linha_rotulo_valor("Pontos Ecoa gerados/mês", dados["pontos_ecoa_mes"])
+    linha_rotulo_valor(
+        "Pontos para zerar a conta", dados["pontos_para_zerar_conta"]
+    )
+    linha_rotulo_valor(
+        "Pontos adicionais necessários", dados["pontos_faltantes_para_zerar"]
+    )
     pdf.ln(4)
 
     # Parâmetros financeiros
@@ -247,6 +253,8 @@ nova_conta = max(valor_conta - economia_mensal, 0)
 # Pontos Ecoa (cada R$ 0,03 de economia mensal = 1 ponto)
 valor_ponto_ecoa = 0.03
 pontos_ecoa_mes = economia_mensal / valor_ponto_ecoa if valor_ponto_ecoa else 0
+pontos_para_zerar_conta = valor_conta / valor_ponto_ecoa if valor_ponto_ecoa else 0
+pontos_faltantes_para_zerar = max(pontos_para_zerar_conta - pontos_ecoa_mes, 0)
 
 # Consumo estimado (kWh/mês) da parte variável
 if tarifa_media > 0:
@@ -299,6 +307,22 @@ with col4:
 
 st.markdown("---")
 
+col5, col6 = st.columns(2)
+with col5:
+    st.markdown("**Pontos necessários para zerar a conta**")
+    st.markdown(
+        f"<div class='big-metric'>{format_number_br(pontos_para_zerar_conta, 0)}</div>",
+        unsafe_allow_html=True,
+    )
+with col6:
+    st.markdown("**Pontos adicionais para zerar**")
+    st.markdown(
+        f"<div class='big-metric'>{format_number_br(pontos_faltantes_para_zerar, 0)}</div>",
+        unsafe_allow_html=True,
+    )
+
+st.markdown("---")
+
 # ----------------- DETALHAMENTO – RESUMO FINANCEIRO & IMPACTO -----------------
 col_fin, col_amb = st.columns(2)
 
@@ -314,6 +338,8 @@ with col_fin:
         - Economia em {periodo_meses} meses: **{format_currency_br(economia_total_periodo)}**
         - Nova conta aproximada: **{format_currency_br(nova_conta)}**
         - Pontos Ecoa gerados/mês: **{format_number_br(pontos_ecoa_mes, 0)} pontos**
+        - Pontos necessários para zerar a conta: **{format_number_br(pontos_para_zerar_conta, 0)} pontos**
+        - Pontos adicionais para zerar: **{format_number_br(pontos_faltantes_para_zerar, 0)} pontos**
         """
     )
 
@@ -355,6 +381,10 @@ dados_para_pdf = {
     "cobertura": cobertura_percent,
     "parte_variavel": parte_variavel_percent,
     "pontos_ecoa_mes": format_number_br(pontos_ecoa_mes, 0),
+    "pontos_para_zerar_conta": format_number_br(pontos_para_zerar_conta, 0),
+    "pontos_faltantes_para_zerar": format_number_br(
+        pontos_faltantes_para_zerar, 0
+    ),
     "fator_co2": format_number_br(fator_emissao_kg_kwh, 2),
     "co2_periodo_t": format_number_br(co2_evitado_t_periodo, 2),
 }
