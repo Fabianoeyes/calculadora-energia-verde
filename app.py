@@ -279,7 +279,7 @@ st.write(
 
 st.markdown("---")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("**Economia mensal estimada**")
     st.markdown(
@@ -298,16 +298,16 @@ with col3:
         f"<div class='big-metric'>{format_currency_br(nova_conta)}</div>",
         unsafe_allow_html=True,
     )
+
+st.markdown("---")
+
+col4, col5, col6 = st.columns(3)
 with col4:
     st.markdown("**Pontos Ecoa gerados/mês**")
     st.markdown(
         f"<div class='big-metric'>{format_number_br(pontos_ecoa_mes, 0)}</div>",
         unsafe_allow_html=True,
     )
-
-st.markdown("---")
-
-col5, col6 = st.columns(2)
 with col5:
     st.markdown("**Pontos necessários para zerar a conta**")
     st.markdown(
