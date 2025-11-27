@@ -57,7 +57,9 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     Usa apenas caracteres compatíveis com Latin-1.
     """
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=18)
+    # Mantém tudo em uma página para evitar que o rodapé seja empurrado
+    # para uma segunda folha.
+    pdf.set_auto_page_break(auto=False)
     pdf.add_page()
 
     # Logo Prospera (canto superior direito)
