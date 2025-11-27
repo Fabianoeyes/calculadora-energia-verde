@@ -57,19 +57,19 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     Usa apenas caracteres compatíveis com Latin-1.
     """
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
 
     # Logo Prospera (canto superior direito)
     try:
-        pdf.image("prospera_logo.png", x=165, y=8, w=30)
+        pdf.image("prospera_logo.png", x=170, y=10, w=25)
     except Exception:
-        # se não encontrar o logo, não quebra o PDF
+        # Se não encontrar o logo, não quebra o PDF
         pass
 
     # Título
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, texto_pdf_safe("Calculadora de Economia - Energia Verde"), ln=True)
+    pdf.cell(0, 12, texto_pdf_safe("Calculadora de Economia - Energia Verde"), ln=True)
 
     # Subtítulo
     pdf.set_font("Arial", "", 11)
@@ -82,83 +82,49 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     )
     pdf.ln(4)
 
-    # Resumo da simulação
-    pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, texto_pdf_safe("Resumo da simulacao"), ln=True)
+    def bloco_titulo(texto: str):
+        pdf.set_font("Arial", "B", 13)
+        pdf.cell(0, 8, texto_pdf_safe(texto), ln=True)
+        pdf.set_line_width(0.2)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+        pdf.ln(3)
 
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(
-        0,
-        7,
-        texto_pdf_safe(f"Conta atual: {dados['valor_conta']}"),
-        ln=True,
+    def linha_rotulo_valor(rotulo: str, valor: str):
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(70, 8, texto_pdf_safe(rotulo), ln=0)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 8, texto_pdf_safe(valor), ln=1)
+
+    # Resumo da simulação
+    bloco_titulo("Resumo da simulacao")
+    linha_rotulo_valor("Conta atual", dados["valor_conta"])
+    linha_rotulo_valor("Nova conta aproximada", dados["nova_conta"])
+    linha_rotulo_valor("Economia mensal", dados["economia_mensal"])
+    linha_rotulo_valor(
+        f"Economia em {dados['periodo_meses']} meses", dados["economia_periodo"]
     )
-    pdf.cell(
-        0,
-        7,
-        texto_pdf_safe(f"Nova conta aproximada: {dados['nova_conta']}"),
-        ln=True,
-    )
-    pdf.cell(
-        0,
-        7,
-        texto_pdf_safe(f"Economia mensal: {dados['economia_mensal']}"),
-        ln=True,
-    )
-    pdf.cell(
-        0,
-        7,
-        texto_pdf_safe(
-            f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}"
-        ),
-        ln=True,
-    )
-    pdf.ln(6)
+    pdf.ln(4)
 
     # Parâmetros financeiros
-    pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, texto_pdf_safe("Parametros financeiros"), ln=True)
-
-    pdf.set_font("Arial", "", 12)
-    pdf.multi_cell(
-        pdf.epw,
-        6,
-        texto_pdf_safe(f"Desconto aplicado: {dados['desconto']}%"),
+    bloco_titulo("Parametros financeiros")
+    linha_rotulo_valor("Desconto aplicado", f"{dados['desconto']}%")
+    linha_rotulo_valor(
+        "Cobertura energia verde", f"{dados['cobertura']}% da conta"
     )
-    pdf.multi_cell(
-        pdf.epw,
-        6,
-        texto_pdf_safe(
-            f"Cobertura energia verde: {dados['cobertura']}% da conta"
-        ),
-    )
-    pdf.multi_cell(
-        pdf.epw,
-        6,
-        texto_pdf_safe(
-            f"Parte variavel considerada: {dados['parte_variavel']}% da conta"
-        ),
+    linha_rotulo_valor(
+        "Parte variavel considerada", f"{dados['parte_variavel']}% da conta"
     )
     pdf.ln(4)
 
     # Impacto ambiental
-    pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, texto_pdf_safe("Impacto ambiental estimado"), ln=True)
-
-    pdf.set_font("Arial", "", 12)
-    pdf.multi_cell(
-        pdf.epw,
-        6,
-        texto_pdf_safe(
-            f"Fator de emissao adotado: {dados['fator_co2']} kg CO2e/kWh"
-        ),
+    bloco_titulo("Impacto ambiental estimado")
+    linha_rotulo_valor(
+        "Fator de emissao adotado",
+        f"{dados['fator_co2']} kg CO2e/kWh",
     )
-    pdf.multi_cell(
-        pdf.epw,
-        6,
-        texto_pdf_safe(
-            f"CO2 evitado em {dados['periodo_meses']} meses: {dados['co2_periodo_t']} t CO2e"
-        ),
+    linha_rotulo_valor(
+        f"CO2 evitado em {dados['periodo_meses']} meses",
+        f"{dados['co2_periodo_t']} t CO2e",
     )
     pdf.ln(6)
 
@@ -166,11 +132,23 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     pdf.set_font("Arial", "I", 10)
     pdf.multi_cell(
         pdf.epw,
-        6,
+        5.5,
         texto_pdf_safe(
             "Simulacao estimada. Para inventarios oficiais (GHG Protocol), "
             "use fatores de emissao oficiais da regiao e da fonte de energia do cliente."
         ),
+    )
+
+    # Rodapé
+    pdf.set_y(-18)
+    pdf.set_font("Arial", "I", 8)
+    pdf.set_text_color(100)
+    pdf.cell(
+        0,
+        8,
+        texto_pdf_safe("By Tech Team Prospera / Sales Team"),
+        ln=True,
+        align="C",
     )
 
     # Retorna bytes do PDF
