@@ -43,10 +43,18 @@ def format_number_br(valor: float, decimals: int = 0) -> str:
     return fmt.format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def texto_pdf_safe(texto: str) -> str:
+    """
+    Remove caracteres que não são suportados pelo encoding Latin-1 do FPDF.
+    Evita FPDFUnicodeEncodingException.
+    """
+    return texto.encode("latin-1", "ignore").decode("latin-1")
+
+
 def gerar_relatorio_pdf(dados: dict) -> bytes:
     """
     Gera um PDF em memória com o resumo da simulação.
-    Usa apenas caracteres compatíveis com Latin-1 (sem emojis/CO₂ subscrito).
+    Usa apenas caracteres compatíveis com Latin-1.
     """
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -54,86 +62,115 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
 
     # Logo Prospera (canto superior direito)
     try:
-        # coordenadas em mm (padrão FPDF, página A4 ~ 210 x 297 mm)
         pdf.image("prospera_logo.png", x=165, y=8, w=30)
     except Exception:
-        # se não encontrar o logo, continua sem quebrar
+        # se não encontrar o logo, não quebra o PDF
         pass
 
     # Título
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "Calculadora de Economia - Energia Verde", ln=True)
-    pdf.ln(2)
+    pdf.cell(0, 10, texto_pdf_safe("Calculadora de Economia - Energia Verde"), ln=True)
 
     # Subtítulo
     pdf.set_font("Arial", "", 11)
     pdf.multi_cell(
         0,
         6,
-        "Resumo da economia financeira e do impacto ambiental estimado para este cliente.",
+        texto_pdf_safe(
+            "Resumo da economia financeira e do impacto ambiental estimado para este cliente."
+        ),
     )
     pdf.ln(4)
 
-    # Dados principais
+    # Resumo da simulação
     pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, "Resumo da simulacao", ln=True)
+    pdf.cell(0, 8, texto_pdf_safe("Resumo da simulacao"), ln=True)
+
     pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 7, f"Conta atual: {dados['valor_conta']}", ln=True)
-    pdf.cell(0, 7, f"Nova conta aproximada: {dados['nova_conta']}", ln=True)
-    pdf.ln(2)
-    pdf.cell(0, 7, f"Economia mensal estimada: {dados['economia_mensal']}", ln=True)
     pdf.cell(
         0,
         7,
-        f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}",
+        texto_pdf_safe(f"Conta atual: {dados['valor_conta']}"),
+        ln=True,
+    )
+    pdf.cell(
+        0,
+        7,
+        texto_pdf_safe(f"Nova conta aproximada: {dados['nova_conta']}"),
+        ln=True,
+    )
+    pdf.cell(
+        0,
+        7,
+        texto_pdf_safe(f"Economia mensal: {dados['economia_mensal']}"),
+        ln=True,
+    )
+    pdf.cell(
+        0,
+        7,
+        texto_pdf_safe(
+            f"Economia em {dados['periodo_meses']} meses: {dados['economia_periodo']}"
+        ),
         ln=True,
     )
     pdf.ln(6)
 
-    # Parametros financeiros
+    # Parâmetros financeiros
     pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, "Parametros financeiros", ln=True)
+    pdf.cell(0, 8, texto_pdf_safe("Parametros financeiros"), ln=True)
+
     pdf.set_font("Arial", "", 12)
     pdf.multi_cell(
         0,
         6,
-        f"- Desconto aplicado: {dados['desconto']}%",
+        texto_pdf_safe(f"Desconto aplicado: {dados['desconto']}%"),
     )
     pdf.multi_cell(
         0,
         6,
-        f"- Cobertura de energia verde: {dados['cobertura']}% da conta",
+        texto_pdf_safe(
+            f"Cobertura energia verde: {dados['cobertura']}% da conta"
+        ),
     )
     pdf.multi_cell(
         0,
         6,
-        f"- Parte variavel considerada: {dados['parte_variavel']}% da conta",
+        texto_pdf_safe(
+            f"Parte variavel considerada: {dados['parte_variavel']}% da conta"
+        ),
     )
     pdf.ln(4)
 
     # Impacto ambiental
     pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, "Impacto ambiental estimado", ln=True)
+    pdf.cell(0, 8, texto_pdf_safe("Impacto ambiental estimado"), ln=True)
+
     pdf.set_font("Arial", "", 12)
     pdf.multi_cell(
         0,
         6,
-        f"- Fator de emissao adotado: {dados['fator_co2']} kg CO2e/kWh",
+        texto_pdf_safe(
+            f"Fator de emissao adotado: {dados['fator_co2']} kg CO2e/kWh"
+        ),
     )
     pdf.multi_cell(
         0,
         6,
-        f"- CO2 evitado em {dados['periodo_meses']} meses: {dados['co2_periodo_t']} t CO2e",
+        texto_pdf_safe(
+            f"CO2 evitado em {dados['periodo_meses']} meses: {dados['co2_periodo_t']} t CO2e"
+        ),
     )
     pdf.ln(6)
 
-    # Observacao
-    pdf.set_font("Arial", "I", 11)
+    # Observação
+    pdf.set_font("Arial", "I", 10)
     pdf.multi_cell(
         0,
         6,
-        "Simulacao estimada. Para inventarios oficiais (GHG Protocol), "
-        "use fatores de emissao oficiais da regiao e da fonte de energia do cliente.",
+        texto_pdf_safe(
+            "Simulacao estimada. Para inventarios oficiais (GHG Protocol), "
+            "use fatores de emissao oficiais da regiao e da fonte de energia do cliente."
+        ),
     )
 
     # Retorna bytes do PDF
@@ -188,7 +225,7 @@ st.sidebar.markdown(
     """
 )
 
-# ----------------- PARÂMETROS DE CO2 (AVANÇADO) -----------------
+# ----------------- PARÂMETROS DE CO₂ (AVANÇADO) -----------------
 with st.expander("🌱 Parâmetros de CO₂ (avançado)", expanded=False):
     st.markdown(
         """
