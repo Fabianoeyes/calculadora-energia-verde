@@ -245,12 +245,12 @@ with st.expander("🌱 Parâmetros de CO₂ (avançado)", expanded=False):
     )
 
 # ----------------- CÁLCULOS -----------------
-# Parte variável considerada (ex.: 80% da conta)
-parte_variavel_percent = 80
+# Parte variável considerada (100% da conta) para aplicar o desconto corretamente
+parte_variavel_percent = 100
 valor_parte_variavel = valor_conta * (parte_variavel_percent / 100)
 
 # Parte da conta coberta pela energia verde (em R$)
-valor_coberto_verde = valor_parte_variavel * (cobertura_percent / 100)
+valor_coberto_verde = valor_conta * (cobertura_percent / 100)
 
 # Economia mensal em R$ (desconto sobre a parte coberta pela energia verde)
 economia_mensal = valor_coberto_verde * (desconto_percent / 100)
