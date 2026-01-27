@@ -271,8 +271,8 @@ economia_total_periodo = economia_mensal * periodo_meses
 # Nova conta aproximada
 nova_conta = max(valor_conta - economia_mensal, 0)
 
-# Pontos Ecoa (cada R$ 0,03 de economia mensal = 1 ponto)
-valor_ponto_ecoa = 0.03
+# Pontos Ecoa (cada R$ 0,009 de economia mensal = 1 ponto)
+valor_ponto_ecoa = 0.009
 pontos_ecoa_mes = economia_mensal / valor_ponto_ecoa if valor_ponto_ecoa else 0
 pontos_para_zerar_conta = valor_conta / valor_ponto_ecoa if valor_ponto_ecoa else 0
 pontos_faltantes_para_zerar = max(pontos_para_zerar_conta - pontos_ecoa_mes, 0)
