@@ -222,13 +222,6 @@ periodo_meses = st.sidebar.number_input(
     step=1,
 )
 
-tarifa_media = st.sidebar.number_input(
-    "Tarifa média (R$/kWh)",
-    min_value=0.01,
-    value=0.95,
-    step=0.01,
-)
-
 st.sidebar.markdown(
     """
     _Preencha os dados e veja o resultado em tempo real na tela principal._
@@ -255,6 +248,9 @@ with st.expander("🌱 Parâmetros de CO₂ (avançado)", expanded=False):
     )
 
 # ----------------- CÁLCULOS -----------------
+# Tarifa média fixa para estimativas internas (R$/kWh)
+tarifa_media = 0.95
+
 # Parte variável considerada (100% da conta) para aplicar o desconto corretamente
 parte_variavel_percent = 100
 valor_parte_variavel = valor_conta * (parte_variavel_percent / 100)
