@@ -222,25 +222,29 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
     # Mantém tudo em uma página para evitar que o rodapé seja empurrado
     # para uma segunda folha.
     pdf.set_auto_page_break(auto=False)
+    pdf.set_margins(left=15, top=24, right=15)
     pdf.add_page()
 
     # Logo Soul Up (canto superior direito)
     try:
-        pdf.image(logo_path, x=155, y=8, w=40)
+        logo_width = 30
+        logo_x = pdf.w - pdf.r_margin - logo_width
+        pdf.image(logo_path, x=logo_x, y=6, w=logo_width)
     except Exception:
         # Se não encontrar o logo, não quebra o PDF
         pass
 
     # Título
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(
-        0,
-        12,
+    title_width = pdf.epw - (logo_width + 6)
+    pdf.multi_cell(
+        title_width,
+        8,
         texto_pdf_safe(
             "Calculadora de Economia - Programa de Pontos & Desconto na Conta de Luz"
         ),
-        ln=True,
     )
+    pdf.ln(2)
 
     # Subtítulo
     pdf.set_font("Arial", "", 11)
@@ -261,10 +265,21 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
         pdf.ln(3)
 
     def linha_rotulo_valor(rotulo: str, valor: str):
+        label_width = 110
+        value_width = pdf.w - pdf.l_margin - pdf.r_margin - label_width
+        x_inicial = pdf.get_x()
+        y_inicial = pdf.get_y()
+
         pdf.set_font("Arial", "", 12)
-        pdf.cell(70, 8, texto_pdf_safe(rotulo), ln=0)
+        pdf.multi_cell(label_width, 7, texto_pdf_safe(rotulo))
+        y_apos_rotulo = pdf.get_y()
+
+        pdf.set_xy(x_inicial + label_width, y_inicial)
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, texto_pdf_safe(valor), ln=1)
+        pdf.multi_cell(value_width, 7, texto_pdf_safe(valor), align="R")
+        y_apos_valor = pdf.get_y()
+
+        pdf.set_xy(x_inicial, max(y_apos_rotulo, y_apos_valor))
 
     # Resumo da simulação
     bloco_titulo("Resumo da Simulação")
