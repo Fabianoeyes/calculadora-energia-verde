@@ -226,8 +226,8 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
     pdf.add_page()
 
     # Logo Soul Up (canto superior direito)
+    logo_width = 32
     try:
-        logo_width = 30
         logo_x = pdf.w - pdf.r_margin - logo_width
         pdf.image(logo_path, x=logo_x, y=6, w=logo_width)
     except Exception:
