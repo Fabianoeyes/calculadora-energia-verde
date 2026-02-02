@@ -222,11 +222,14 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
     # Mantém tudo em uma página para evitar que o rodapé seja empurrado
     # para uma segunda folha.
     pdf.set_auto_page_break(auto=False)
+    pdf.set_margins(left=15, top=24, right=15)
     pdf.add_page()
 
     # Logo Soul Up (canto superior direito)
     try:
-        pdf.image(logo_path, x=155, y=8, w=40)
+        logo_width = 35
+        logo_x = pdf.w - pdf.r_margin - logo_width
+        pdf.image(logo_path, x=logo_x, y=6, w=logo_width)
     except Exception:
         # Se não encontrar o logo, não quebra o PDF
         pass
