@@ -1,6 +1,7 @@
-
-
 import streamlit as st
+import base64
+import tempfile
+from pathlib import Path
 from fpdf import FPDF
 
 # ----------------- CONFIGURAÇÃO BÁSICA -----------------
@@ -29,6 +30,14 @@ st.markdown(
         justify-content: space-between;
         gap: 1.5rem;
     }
+    .letterhead {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0.5rem 0 0.75rem;
+        border-bottom: 2px solid #e6e6e6;
+        margin-bottom: 1rem;
+    }
     .header-title {
         font-size: 32px;
         font-weight: 700;
@@ -42,7 +51,7 @@ st.markdown(
         margin: 0;
     }
     .header-logo {
-        height: 48px;
+        height: 52px;
         margin-top: 2px;
     }
     @media (max-width: 768px) {
@@ -53,7 +62,7 @@ st.markdown(
             font-size: 18px;
         }
         .header-logo {
-            height: 42px;
+            height: 44px;
         }
     }
     .section-title {
@@ -91,7 +100,20 @@ def texto_pdf_safe(texto: str) -> str:
     return texto.encode("latin-1", "ignore").decode("latin-1")
 
 
-def gerar_relatorio_pdf(dados: dict) -> bytes:
+def carregar_logo() -> tuple[str, str]:
+    base64_path = Path(__file__).with_name("soul_up_logo_base64.txt")
+    with base64_path.open("r", encoding="utf-8") as arquivo_logo:
+        logo_base64 = arquivo_logo.read().strip()
+
+    dados_imagem = base64.b64decode(logo_base64)
+    arquivo_temporario = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    arquivo_temporario.write(dados_imagem)
+    arquivo_temporario.close()
+
+    return logo_base64, arquivo_temporario.name
+
+
+def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
     """
     Gera um PDF em memória com o resumo da simulação.
     Usa apenas caracteres compatíveis com Latin-1.
@@ -100,8 +122,22 @@ def gerar_relatorio_pdf(dados: dict) -> bytes:
     # Mantém tudo em uma página para evitar que o rodapé seja empurrado
     # para uma segunda folha.
     pdf.set_auto_page_break(auto=False)
-    pdf.set_margins(left=15, top=24, right=15)
+    pdf.set_margins(left=15, top=28, right=15)
     pdf.add_page()
+
+    # Logo (cabeçalho)
+    try:
+        logo_width = 60
+        logo_x = (pdf.w - logo_width) / 2
+        pdf.image(logo_path, x=logo_x, y=8, w=logo_width)
+    except Exception:
+        pass
+
+    pdf.ln(22)
+    pdf.set_line_width(0.4)
+    pdf.set_draw_color(200)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+    pdf.ln(6)
 
     # Título
     pdf.set_font("Arial", "B", 16)
@@ -319,8 +355,12 @@ co2_evitado_t_periodo = co2_evitado_kg_periodo / 1000
 
 
 # ----------------- TÍTULO E RESUMO PRINCIPAL -----------------
+logo_base64, logo_path = carregar_logo()
 st.markdown(
-    """
+    f"""
+    <div class="letterhead">
+        <img src="data:image/png;base64,{logo_base64}" class="header-logo" alt="Logo Soul Up" />
+    </div>
     <div class="header-row">
         <div class="header-text">
             <div class="header-title">⚡ Calculadora de Economia</div>
@@ -414,7 +454,7 @@ st.markdown("### 📄 Relatório em PDF")
 
 st.write(
     "Clique no botão abaixo para gerar um **PDF com o resumo da simulação**, "
-    "incluindo logo da Soul Up. Você pode enviar esse PDF diretamente pelo WhatsApp."
+    "com o cabeçalho da Soul Up. Você pode enviar esse PDF diretamente pelo WhatsApp."
 )
 
 dados_para_pdf = {
@@ -436,7 +476,7 @@ dados_para_pdf = {
 }
 
 if st.button("Gerar relatório em PDF"):
-    pdf_bytes = gerar_relatorio_pdf(dados_para_pdf)
+    pdf_bytes = gerar_relatorio_pdf(dados_para_pdf, logo_path)
 
     st.download_button(
         label="⬇️ Baixar relatório (PDF)",
