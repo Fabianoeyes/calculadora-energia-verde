@@ -484,4 +484,3 @@ if st.button("Gerar relatório em PDF"):
         file_name="relatorio_programa_pontos_soul_up.pdf",
         mime="application/pdf",
     )
-
