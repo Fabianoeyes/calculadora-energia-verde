@@ -1,10 +1,7 @@
-import base64
-import tempfile
-from io import BytesIO
+
 
 import streamlit as st
 from fpdf import FPDF
-from PIL import Image, ImageDraw, ImageFont
 
 # ----------------- CONFIGURAÇÃO BÁSICA -----------------
 st.set_page_config(
@@ -94,126 +91,7 @@ def texto_pdf_safe(texto: str) -> str:
     return texto.encode("latin-1", "ignore").decode("latin-1")
 
 
-def gerar_logo_soul_up() -> tuple[str, str]:
-    largura, altura = 1200, 400
-    fundo = (255, 255, 255)
-    verde = (46, 174, 182)
-
-    imagem = Image.new("RGB", (largura, altura), fundo)
-    desenho = ImageDraw.Draw(imagem)
-
-    fonte_principal = ImageFont.truetype("DejaVuSans-Bold.ttf", 180)
-    fonte_icone = ImageFont.truetype("DejaVuSans-Bold.ttf", 90)
-
-    texto = "soul"
-    texto_largura, texto_altura = desenho.textbbox((0, 0), texto, font=fonte_principal)[
-        2:
-    ]
-    texto_x = 40
-    texto_y = (altura - texto_altura) // 2 - 10
-
-    desenho.text((texto_x, texto_y), texto, fill=verde, font=fonte_principal)
-
-    diametro = 160
-    espacamento = 20
-    inicio_x = texto_x + texto_largura + 40
-    inicio_y = (altura - diametro) // 2
-
-    for indice in range(3):
-        x0 = inicio_x + indice * (diametro + espacamento)
-        y0 = inicio_y
-        x1 = x0 + diametro
-        y1 = y0 + diametro
-        desenho.ellipse([x0, y0, x1, y1], outline=verde, width=12)
-
-    texto_up = "up"
-    up_largura, up_altura = desenho.textbbox((0, 0), texto_up, font=fonte_icone)[2:]
-    up_x = inicio_x + (diametro - up_largura) // 2
-    up_y = inicio_y + (diametro - up_altura) // 2 - 5
-    desenho.text((up_x, up_y), texto_up, fill=verde, font=fonte_icone)
-
-    centro_folha_x = inicio_x + (diametro + espacamento) + diametro // 2
-    centro_folha_y = inicio_y + diametro // 2
-    folha_largura = 60
-    folha_altura = 80
-
-    desenho.polygon(
-        [
-            (centro_folha_x, centro_folha_y - folha_altura // 2),
-            (centro_folha_x - folha_largura, centro_folha_y),
-            (centro_folha_x, centro_folha_y + folha_altura // 2),
-        ],
-        outline=verde,
-    )
-    desenho.polygon(
-        [
-            (centro_folha_x, centro_folha_y - folha_altura // 2),
-            (centro_folha_x + folha_largura, centro_folha_y),
-            (centro_folha_x, centro_folha_y + folha_altura // 2),
-        ],
-        outline=verde,
-    )
-    desenho.line(
-        [
-            (centro_folha_x, centro_folha_y - folha_altura // 2),
-            (centro_folha_x, centro_folha_y + folha_altura // 2),
-        ],
-        fill=verde,
-        width=6,
-    )
-
-    centro_planeta_x = inicio_x + 2 * (diametro + espacamento) + diametro // 2
-    centro_planeta_y = centro_folha_y
-    raio_planeta = 45
-
-    desenho.ellipse(
-        [
-            (centro_planeta_x - raio_planeta, centro_planeta_y - raio_planeta),
-            (centro_planeta_x + raio_planeta, centro_planeta_y + raio_planeta),
-        ],
-        outline=verde,
-        width=6,
-    )
-    for offset in (-18, 0, 18):
-        desenho.arc(
-            [
-                centro_planeta_x - raio_planeta + offset,
-                centro_planeta_y - raio_planeta,
-                centro_planeta_x + raio_planeta + offset,
-                centro_planeta_y + raio_planeta,
-            ],
-            start=90,
-            end=270,
-            fill=verde,
-            width=4,
-        )
-    for offset in (-18, 0, 18):
-        desenho.arc(
-            [
-                centro_planeta_x - raio_planeta,
-                centro_planeta_y - raio_planeta + offset,
-                centro_planeta_x + raio_planeta,
-                centro_planeta_y + raio_planeta + offset,
-            ],
-            start=0,
-            end=180,
-            fill=verde,
-            width=4,
-        )
-
-    buffer = BytesIO()
-    imagem.save(buffer, format="PNG")
-    dados_imagem = buffer.getvalue()
-    logo_base64 = base64.b64encode(dados_imagem).decode("utf-8")
-
-    arquivo_temporario = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    arquivo_temporario.write(dados_imagem)
-    arquivo_temporario.close()
-
-    return logo_base64, arquivo_temporario.name
-
-
-def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
+def gerar_relatorio_pdf(dados: dict) -> bytes:
     """
     Gera um PDF em memória com o resumo da simulação.
     Usa apenas caracteres compatíveis com Latin-1.
@@ -222,25 +100,19 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
     # Mantém tudo em uma página para evitar que o rodapé seja empurrado
     # para uma segunda folha.
     pdf.set_auto_page_break(auto=False)
+    pdf.set_margins(left=15, top=24, right=15)
     pdf.add_page()
-
-    # Logo Soul Up (canto superior direito)
-    try:
-        pdf.image(logo_path, x=155, y=8, w=40)
-    except Exception:
-        # Se não encontrar o logo, não quebra o PDF
-        pass
 
     # Título
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(
-        0,
-        12,
+    pdf.multi_cell(
+        pdf.epw,
+        8,
         texto_pdf_safe(
             "Calculadora de Economia - Programa de Pontos & Desconto na Conta de Luz"
         ),
-        ln=True,
     )
+    pdf.ln(2)
 
     # Subtítulo
     pdf.set_font("Arial", "", 11)
@@ -261,10 +133,21 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
         pdf.ln(3)
 
     def linha_rotulo_valor(rotulo: str, valor: str):
+        label_width = 110
+        value_width = pdf.w - pdf.l_margin - pdf.r_margin - label_width
+        x_inicial = pdf.get_x()
+        y_inicial = pdf.get_y()
+
         pdf.set_font("Arial", "", 12)
-        pdf.cell(70, 8, texto_pdf_safe(rotulo), ln=0)
+        pdf.multi_cell(label_width, 7, texto_pdf_safe(rotulo))
+        y_apos_rotulo = pdf.get_y()
+
+        pdf.set_xy(x_inicial + label_width, y_inicial)
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, texto_pdf_safe(valor), ln=1)
+        pdf.multi_cell(value_width, 7, texto_pdf_safe(valor), align="R")
+        y_apos_valor = pdf.get_y()
+
+        pdf.set_xy(x_inicial, max(y_apos_rotulo, y_apos_valor))
 
     # Resumo da simulação
     bloco_titulo("Resumo da Simulação")
@@ -436,15 +319,13 @@ co2_evitado_t_periodo = co2_evitado_kg_periodo / 1000
 
 
 # ----------------- TÍTULO E RESUMO PRINCIPAL -----------------
-logo_base64, logo_path = gerar_logo_soul_up()
 st.markdown(
-    f"""
+    """
     <div class="header-row">
         <div class="header-text">
             <div class="header-title">⚡ Calculadora de Economia</div>
             <div class="header-subtitle">Programa de Pontos &amp; Desconto na Conta de Luz</div>
         </div>
-        <img src="data:image/png;base64,{logo_base64}" class="header-logo" alt="Logo Soul Up" />
     </div>
     """,
     unsafe_allow_html=True,
@@ -555,7 +436,7 @@ dados_para_pdf = {
 }
 
 if st.button("Gerar relatório em PDF"):
-    pdf_bytes = gerar_relatorio_pdf(dados_para_pdf, logo_path)
+    pdf_bytes = gerar_relatorio_pdf(dados_para_pdf)
 
     st.download_button(
         label="⬇️ Baixar relatório (PDF)",
