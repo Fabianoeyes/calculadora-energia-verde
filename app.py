@@ -1,6 +1,5 @@
 import streamlit as st
 import base64
-import tempfile
 from pathlib import Path
 from fpdf import FPDF
 
@@ -100,16 +99,14 @@ def texto_pdf_safe(texto: str) -> str:
     return texto.encode("latin-1", "ignore").decode("latin-1")
 
 def carregar_logo() -> tuple[str, str]:
-    base64_path = Path(__file__).with_name("soul_up_logo_base64.txt")
-    with base64_path.open("r", encoding="utf-8") as arquivo_logo:
-        logo_base64 = arquivo_logo.read().strip()
+    logo_path = Path(__file__).with_name("Logo_Soul_Up_Azul.jpg.jpeg")
+    try:
+        with logo_path.open("rb") as arquivo_logo:
+            logo_base64 = base64.b64encode(arquivo_logo.read()).decode("utf-8")
+    except FileNotFoundError:
+        return "", ""
 
-    dados_imagem = base64.b64decode(logo_base64)
-    arquivo_temporario = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    arquivo_temporario.write(dados_imagem)
-    arquivo_temporario.close()
-
-    return logo_base64, arquivo_temporario.name
+    return logo_base64, str(logo_path)
 
 
 def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
@@ -125,12 +122,13 @@ def gerar_relatorio_pdf(dados: dict, logo_path: str) -> bytes:
     pdf.add_page()
 
     # Logo (cabeçalho)
-    try:
-        logo_width = 60
-        logo_x = (pdf.w - logo_width) / 2
-        pdf.image(logo_path, x=logo_x, y=8, w=logo_width)
-    except Exception:
-        pass
+    if logo_path:
+        try:
+            logo_width = 60
+            logo_x = (pdf.w - logo_width) / 2
+            pdf.image(logo_path, x=logo_x, y=8, w=logo_width)
+        except Exception:
+            pass
 
     pdf.ln(22)
     pdf.set_line_width(0.4)
@@ -355,20 +353,33 @@ co2_evitado_t_periodo = co2_evitado_kg_periodo / 1000
 
 # ----------------- TÍTULO E RESUMO PRINCIPAL -----------------
 logo_base64, logo_path = carregar_logo()
-st.markdown(
-    f"""
-    <div class="letterhead">
-        <img src="data:image/png;base64,{logo_base64}" class="header-logo" alt="Logo Soul Up" />
-    </div>
-    <div class="header-row">
-        <div class="header-text">
-            <div class="header-title">⚡ Calculadora de Economia</div>
-            <div class="header-subtitle">Programa de Pontos &amp; Desconto na Conta de Luz</div>
+if logo_base64:
+    st.markdown(
+        f"""
+        <div class="letterhead">
+            <img src="data:image/jpeg;base64,{logo_base64}" class="header-logo" alt="Logo Soul Up" />
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+        <div class="header-row">
+            <div class="header-text">
+                <div class="header-title">⚡ Calculadora de Economia</div>
+                <div class="header-subtitle">Programa de Pontos &amp; Desconto na Conta de Luz</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        """
+        <div class="header-row">
+            <div class="header-text">
+                <div class="header-title">⚡ Calculadora de Economia</div>
+                <div class="header-subtitle">Programa de Pontos &amp; Desconto na Conta de Luz</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown("---")
 
