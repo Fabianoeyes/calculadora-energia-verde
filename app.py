@@ -445,7 +445,6 @@ with col_amb:
     st.markdown(
         f"""
         - Consumo estimado: **{format_number_br(consumo_kwh_mes, 0)} kWh/mês**
-        - kWh economizados com energia verde: **{format_number_br(kwh_economizados_mes, 0)} kWh/mês**
         - Fator de emissão adotado: **{format_number_br(fator_emissao_kg_kwh, 2)} kg CO₂e/kWh**
         - CO₂ evitado por mês: **{format_number_br(co2_evitado_kg_mes, 1)} kg CO₂e**
         - CO₂ evitado em {periodo_meses} meses: **{format_number_br(co2_evitado_t_periodo, 2)} t CO₂e**
